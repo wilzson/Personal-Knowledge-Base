@@ -1,0 +1,116 @@
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
+// 消费队列
+class Storage {
+    private static int MAX_VALUE = 200;
+    private List<Object> list = new ArrayList<>();
+    public void produce(int num) {
+        synchronized (list) {
+            while(list.size() + num > MAX_VALUE) {
+                System.out.println(Thread.currentThread().getName() + "暂时不能执行生产任务");
+                try {
+                    list.wait();
+                }catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            for(int i = 0; i < num; i++) {
+                list.add(new Object());
+            }
+            System.out.println(Thread.currentThread().getName() + "已生产产品数" + num + "仓库容量" + list.size());
+            list.notifyAll();
+        }
+    }
+    public void consume(int num) {
+        synchronized (list) {
+            while(list.size() - num < 0) {
+                System.out.println(Thread.currentThread().getName() + "暂时不能执行消费任务");
+                try {
+                    list.wait();
+                }catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            for (int i = 0; i < num; i++) {
+                list.remove(0);
+            }
+            System.out.println(Thread.currentThread().getName() + "已消费产品数" + num + "仓库容量" + list.size());
+            list.notifyAll();
+        }
+    }
+}
+// 生产者
+class Producer extends Thread {
+    private int num;
+    private Storage storage;
+
+    public Producer(Storage storage) {
+        this.storage = storage;
+    }
+
+    public int getNum() {
+        return num;
+    }
+
+    public void setNum(int num) {
+        this.num = num;
+    }
+
+    @Override
+    public void run() {
+        storage.produce(this.num);
+    }
+}
+// 消费者
+class Customer extends Thread{
+    private int num;
+    private Storage storage;
+
+    public Customer(Storage storage) {
+        this.storage = storage;
+    }
+
+    public int getNum() {
+        return num;
+    }
+
+    public void setNum(int num) {
+        this.num = num;
+    }
+
+    @Override
+    public void run() {
+        storage.consume(this.num);
+    }
+}
+public class B{
+    public static void main(String[] args){
+        Storage storage = new Storage();
+        Producer p1 = new Producer(storage);
+
+        Customer c1 = new Customer(storage);
+        Customer c2 = new Customer(storage);
+        Customer c3 = new Customer(storage);
+        Customer c4 = new Customer(storage);
+        Customer c5 = new Customer(storage);
+        p1.setNum(200);
+        c1.setNum(50);
+        c2.setNum(20);
+        c3.setNum(10);
+        c4.setNum(30);
+        c5.setNum(40);
+        c1.start();
+        c2.start();
+        p1.start();
+        c3.start();
+        c4.start();
+        c5.start();
+
+    }
+
+}

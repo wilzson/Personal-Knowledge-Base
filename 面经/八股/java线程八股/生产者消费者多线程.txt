@@ -1,0 +1,88 @@
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
+// 消费队列
+// 生产者
+class Producer implements Callable<Integer> {
+
+    private ArrayBlockingQueue<Integer> arrayBlockingQueue;
+
+    public Producer(ArrayBlockingQueue<Integer> arrayBlockingQueue) {
+        this.arrayBlockingQueue = arrayBlockingQueue;
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        
+        int data = (int) Math.random();
+        arrayBlockingQueue.put(data);
+        System.out.println("生产者线程开始生产数据");
+        return data;
+    }
+}
+// 消费者
+class Customer implements Callable<Integer>{
+    private ArrayBlockingQueue<Integer> arrayBlockingQueue;
+
+    public Customer(ArrayBlockingQueue<Integer> arrayBlockingQueue) {
+        this.arrayBlockingQueue = arrayBlockingQueue;
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        while(true) {
+            int data = arrayBlockingQueue.take();
+            System.out.println("消费者线程获取到数据" + data + "队列长度：" + arrayBlockingQueue.size());
+
+            // 分发给子线程处理
+            distribute(data);
+        }
+    }
+    private Integer distribute(Integer data) throws InterruptedException, ExecutionException {
+        // 创建固定大小的线程池
+        ExecutorService threadPool = Executors.newFixedThreadPool(5);
+        List<Callable<Integer>> invokes = new ArrayList<>(5);
+        for(int i = 0; i < 5; i++) {
+            invokes.add(new DistributeThread(data));
+        }
+        List<Future<Integer>> futures = threadPool.invokeAll(invokes);
+
+        int sum = 0;
+        for (Future<Integer> future: futures) {
+            sum += future.get();
+        }
+        return sum;
+    }
+    static class DistributeThread implements Callable<Integer> {
+        private Integer data;
+
+        public DistributeThread(Integer data) {
+            this.data = data;
+        }
+
+        @Override
+        public Integer call() throws Exception {
+            System.out.println("数据处理成功" + data);
+            return data;
+        }
+    }
+}
+
+public class B{
+    public static void main(String[] args){
+        ArrayBlockingQueue<Integer> arrayBlockingQueue = new ArrayBlockingQueue<>(20);
+        // 创建一个线程池
+        ExecutorService threadPool = Executors.newCachedThreadPool();
+        for(int i = 0; i < 8; i++) {
+            threadPool.submit(new Producer(arrayBlockingQueue));
+        }
+        threadPool.submit(new Customer(arrayBlockingQueue));// submit相当于execute方法，execute用于runnable接口。
+        threadPool.shutdown();
+    }
+
+}

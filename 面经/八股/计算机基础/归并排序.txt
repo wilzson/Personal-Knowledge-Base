@@ -1,0 +1,36 @@
+#include <bits/stdc++.h>
+using namespace std;
+void Merge(vector<int> &num, int begin, int mid, int end) {
+    vector<int> temp(end - begin + 1);
+    int left = begin, left2 = mid + 1;
+    int index = 0;
+    while(left <= mid && left2 <= end) {
+        if(num[left] > num[left2]) {
+            temp[index++] = num[left++];
+        }else{
+            temp[index++] = num[left2++];
+        }
+    }
+    while(left <= mid)
+        temp[index++] = num[left++];
+    while(left2 <= end)
+        temp[index++] = num[left2++];
+    for(int i = 0; i < temp.size(); i++) {
+        num[begin + i] = temp[i];
+    }
+}
+void mergeSort(vector<int> &num, int begin, int end) {
+    if(begin < end){
+        int mid = (end + begin)/2;
+        mergeSort(num, begin, mid);
+        mergeSort(num, mid + 1, end);
+        Merge(num, begin, mid, end);
+    }
+}
+int main() {
+    vector<int> num = {6,10,7,8,1,3,2,5,4,9};
+    mergeSort(num, 0, num.size()-1);
+    for(auto x: num) {
+        cout<<x<<endl;
+    }
+}
